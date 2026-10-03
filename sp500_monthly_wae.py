@@ -61,6 +61,15 @@ st.markdown("""
         font-weight: 700;
         font-size: 0.8rem;
     }
+    .badge-buffett {
+        background-color: #a855f722;
+        color: #c084fc;
+        border: 1px solid #a855f788;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-weight: 700;
+        font-size: 0.8rem;
+    }
     .badge-metric {
         background-color: #1e293b;
         color: #94a3b8;
@@ -279,7 +288,7 @@ def wae_hesapla(df, fast=20, slow=40, bb_len=20, bb_mult=2.0):
 
 
 # -------------------------------------------------------------
-# TEMEL METRİKLER (OCF > 0 VE ROE > 0 ZORUNLU)
+# TEMEL METRİKLER
 # -------------------------------------------------------------
 def hisse_temel_bilgileri(ticker):
     try:
@@ -366,7 +375,6 @@ def canli_haber_ozetleri(ticker, sirket_adi):
         except Exception:
             pass
 
-    # KESİN NEGATİF KELİMELER (TEDBİR, CEZA, YASAKLAR KESİNLİKLE POZİTİF KUTUSUNA GİREMEZ)
     kesin_negatif_kelimeler = [
         "tedbir", "konkordato", "brüt takas", "ceza", "soruşturma", "yasak", "dava", "haciz",
         "iflas", "uyarı", "iptal", "slump", "fall", "decline", "drop", "probe", "lawsuit", "debt",
@@ -385,7 +393,6 @@ def canli_haber_ozetleri(ticker, sirket_adi):
     for h in haberler:
         metin = (h["title"] + " " + h.get("summary", "")).lower()
 
-        # ÖNCELİK 1: Eğer başlıkta tedbir, ceza, dava vs. geçiyorsa doğrudan negatiftir!
         if any(w in metin for w in kesin_negatif_kelimeler):
             if len(olumsuz) < 2:
                 olumsuz.append({"ozet": turkce_ozet_hazirla(h["title"], h.get("summary", "")), "link": h["link"],
@@ -397,7 +404,7 @@ def canli_haber_ozetleri(ticker, sirket_adi):
 
     if not olumlu:
         olumlu.append({
-            "ozet": f"{sirket_adi}, pozitif işletme nakit akışı ve temel operasyonel kapasitesiyle faaliyet tabanını koruyor.",
+            "ozet": f"{sirket_adi}, temel operasyonel kapasitesi ve pazar dinamikleri doğrultusunda faaliyet tabanını koruyor.",
             "link": f"https://www.google.com/search?q={ticker}+yatırım+büyüme",
             "source": "Sektörel Değerlendirme"
         })
@@ -414,19 +421,20 @@ def canli_haber_ozetleri(ticker, sirket_adi):
 # =============================================================
 # SIDEBAR
 # =============================================================
-st.sidebar.title("⚙️️ Tarayıcı Ayarları")
+st.sidebar.title("⚙️ Tarayıcı Ayarları")
 
 secilen_endeks = st.sidebar.selectbox(
     "🏛️ Taranacak Piyasa",
     options=["BIST 100", "BIST 30", "BIST TÜM (500+ Hisse)", "S&P 500 (ABD)"]
 )
 
-# YENİ STRATEJİLER VE GELİŞMİŞ MTF SEÇENEKLERİ
+# STRATEJİ SEÇENEKLERİ
 st.sidebar.markdown("---")
 st.sidebar.markdown("**⏳ Çoklu Zaman Dilimi (MTF) & Strateji:**")
 mtf_modu = st.sidebar.radio(
     "Strateji Seçimi",
     options=[
+        "🏛️ Warren Buffett Modeli (Yüksek ROE, Güçlü Nakit & Güvenlik Marjı)",
         "🚀 Aylık, Haftalık ve Günlük Eşzamanlı İlk Kez Yeşile Dönenler (3x MTF)",
         "💥 Aylık Hull ve WAE Aynı Anda İlk Kez Olumluya Dönenler (Momentum Patlaması)",
         "💎 Aylık Hull Yeşilken, Haftalık Düzeltme Bitirip Yeni Yeşile Dönenler (Trend İçi Tetik)",
@@ -434,6 +442,21 @@ mtf_modu = st.sidebar.radio(
         "🟢 Sadece Aylık Hull Yeni Yeşile Dönenler (Makro Dip)"
     ],
     index=0
+)
+
+# KULLANICI KONTROLÜNDE OPSİYONEL TEMEL FİLTRELER
+st.sidebar.markdown("---")
+st.sidebar.markdown("**🛡️ Temel Kalite Filtreleri (Opsiyonel):**")
+filtre_ocf_aktif = st.sidebar.checkbox(
+    "✅ İşletme Nakit Akışı (OCF) > 0 Şartı",
+    value=True,
+    help="İşaretliyse faaliyetlerinden nakit üretemeyen (eksi nakit akışı olan) şirketler elenir. Tiki kaldırırsanız bu filtre uygulanmaz."
+)
+
+filtre_roe_aktif = st.sidebar.checkbox(
+    "✅ ROE (Özsermaye Kârlılığı) > 0 Şartı",
+    value=True,
+    help="İşaretliyse özsermaye kârlılığı sıfır veya negatif (zarar eden) şirketler elenir. Tiki kaldırırsanız bu filtre uygulanmaz."
 )
 
 hacim_filtresi = st.sidebar.checkbox(
@@ -452,10 +475,8 @@ else:
     tarama_adeti = "Tüm Liste"
     st.sidebar.caption(f"ℹ️ {secilen_endeks} bileşenlerinin tamamı taranacaktır.")
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("**🛡️ Katı Temel Filtreler:**")
-st.sidebar.caption("✅ İşletme Nakit Akışı (OCF) > 0 (Zorunlu)")
-st.sidebar.caption("✅ ROE (Özsermaye Kârlılığı) > 0 (Zorunlu)")
+if "Warren Buffett" in mtf_modu:
+    st.sidebar.caption("👑 Buffett Filtresi: ROE ≥ %15 | FCF ≥ %4 | İskonto ≥ %15")
 
 baslat_butonu = st.sidebar.button("🚀 Listeyi Güncelle ve Tara", use_container_width=True)
 
@@ -466,7 +487,7 @@ para_birimi = "$" if secilen_endeks == "S&P 500 (ABD)" else "₺"
 st.title(f"🏆 {secilen_endeks} Kalite & MTF Dip Dönüş Radarı")
 
 if not baslat_butonu:
-    st.info("Sol menüden MTF stratejinizi belirleyip **'Listeyi Güncelle ve Tara'** butonuna tıklayın.")
+    st.info("Sol menüden stratejinizi ve filtrelerinizi belirleyip **'Listeyi Güncelle ve Tara'** butonuna tıklayın.")
 else:
     with st.spinner("Piyasa hisse listesi hazırlanıyor..."):
         if secilen_endeks == "S&P 500 (ABD)":
@@ -547,14 +568,31 @@ else:
             ort_hacim = df_m['Volume'].iloc[-4:-1].mean() if len(df_m) >= 4 else son_hacim
 
             # ==============================================================
-            # STRATEJİ 1: AYLIK, HAFTALIK VE GÜNLÜK İLK KEZ YEŞİL (3X MTF)
+            # STRATEJİ: WARREN BUFFETT MODELİ
             # ==============================================================
-            if "3x MTF" in mtf_modu and veri_haftalik is not None and veri_gunluk is not None:
-                # 1. Aylık ilk kez yeşile dönmüş olmalı (bu ay veya geçen ay)
+            if "Warren Buffett" in mtf_modu:
+                aylik_pozitif_trend = (son_m['HMA_Diff'] > 0) and (son_m['Close'] >= son_m['HMA'] * 0.95)
+                if not (aylik_bu_yesil or aylik_gecen_yesil or aylik_pozitif_trend):
+                    continue
+
+                temel = hisse_temel_bilgileri(sym)
+                zirve_5y = df_m['Close'].max()
+                iskonto = ((zirve_5y - son_fiyat) / zirve_5y) * 100.0
+
+                if temel["roe"] >= 15.0 and temel["fcf_yield"] >= 4.0 and iskonto >= 15.0 and temel["ocf"] > 0:
+                    uygun_teknik = True
+                    tetik_etiketi = "👑 Buffett Onaylı"
+                    mtf_durumu = "🏛️ Moat + Değer"
+                else:
+                    continue
+
+            # ==============================================================
+            # STRATEJİ: AYLIK, HAFTALIK VE GÜNLÜK İLK KEZ YEŞİL (3X MTF)
+            # ==============================================================
+            elif "3x MTF" in mtf_modu and veri_haftalik is not None and veri_gunluk is not None:
                 if not (aylik_bu_yesil or aylik_gecen_yesil):
                     continue
 
-                # 2. Haftalık ilk kez yeşil olmalı
                 if sym not in veri_haftalik.columns.levels[0]:
                     continue
                 df_w = veri_haftalik[sym].dropna(how="all").dropna(subset=['Close'])
@@ -571,7 +609,6 @@ else:
                 if not haftalik_taze:
                     continue
 
-                # 3. Günlük ilk kez yeşil olmalı
                 if sym not in veri_gunluk.columns.levels[0]:
                     continue
                 df_d = veri_gunluk[sym].dropna(how="all").dropna(subset=['Close'])
@@ -595,9 +632,10 @@ else:
                 son_rsi = son_d['RSI'] if not np.isnan(son_d['RSI']) else 50.0
                 son_hacim = son_d.get('Volume', 0)
                 ort_hacim = df_d['Volume'].iloc[-4:-1].mean() if len(df_d) >= 4 else son_hacim
+                temel = hisse_temel_bilgileri(sym)
 
             # ==============================================================
-            # STRATEJİ 2: AYLIK HULL VE WAE AYNI ANDA İLK KEZ OLUMLUYA DÖNENLER
+            # STRATEJİ: AYLIK HULL VE WAE AYNI ANDA İLK KEZ OLUMLUYA DÖNENLER
             # ==============================================================
             elif "Aylık Hull ve WAE Aynı Anda" in mtf_modu:
                 wae_patlama_bu_ay = (son_m['WAE_Up'] > son_m['WAE_Line']) and (
@@ -613,9 +651,10 @@ else:
                     uygun_teknik = True
                     tetik_etiketi = "🟢 Hull + WAE Patlaması"
                     mtf_durumu = "💥 Çifte Momentumlu Dip"
+                    temel = hisse_temel_bilgileri(sym)
 
             # ==============================================================
-            # STRATEJİ 3: AYLIK HULL YEŞİLKEN HAFTALIK DÜZELTME BİTİRENLER
+            # STRATEJİ: AYLIK HULL YEŞİLKEN HAFTALIK DÜZELTME BİTİRENLER
             # ==============================================================
             elif "Haftalık Düzeltme Bitirip" in mtf_modu and veri_haftalik is not None:
                 aylik_pozitif = (son_m['HMA_Diff'] > 0) and (son_m['Close'] >= son_m['HMA'] * 0.96)
@@ -649,9 +688,10 @@ else:
                     son_rsi = son_w['RSI'] if not np.isnan(son_w['RSI']) else 50.0
                     son_hacim = son_w.get('Volume', 0)
                     ort_hacim = df_w['Volume'].iloc[-4:-1].mean() if len(df_w) >= 4 else son_hacim
+                    temel = hisse_temel_bilgileri(sym)
 
             # ==============================================================
-            # STRATEJİ 4: DİPTEN YÜKSELİŞ TRENDİNE GEÇENLER (HIGHER-LOW)
+            # STRATEJİ: DİPTEN YÜKSELİŞ TRENDİNE GEÇENLER (HIGHER-LOW)
             # ==============================================================
             elif "Dipten Yükseliş Trendine Geçenler" in mtf_modu:
                 if not (aylik_bu_yesil or aylik_gecen_yesil):
@@ -671,15 +711,17 @@ else:
                             uygun_teknik = True
                             tetik_etiketi = "🟢 Yüksek Dip Onaylı"
                             mtf_durumu = "📈 Higher-Low Dönüşü"
+                            temel = hisse_temel_bilgileri(sym)
 
             # ==============================================================
-            # STRATEJİ 5: SADECE AYLIK HULL YENİ YEŞİLE DÖNENLER
+            # STRATEJİ: SADECE AYLIK HULL YENİ YEŞİLE DÖNENLER
             # ==============================================================
             else:
                 if aylik_bu_yesil or aylik_gecen_yesil:
                     uygun_teknik = True
                     tetik_etiketi = "🟢 Bu Ay" if aylik_bu_yesil else "⚡ Geçen Ay"
                     mtf_durumu = "Aylık Taze Dip"
+                    temel = hisse_temel_bilgileri(sym)
 
             if not uygun_teknik:
                 continue
@@ -690,11 +732,12 @@ else:
                 continue
 
             # ==============================================================
-            # KATI TEMEL FİLTRE: OCF > 0 VE ROE > 0 OLMALIDIR!
+            # KULLANICI SEÇİMLİ TEMEL FİLTRELER (OPSİYONEL)
             # ==============================================================
-            temel = hisse_temel_bilgileri(sym)
-            if temel["ocf"] <= 0 or temel["roe"] <= 0:
-                continue  # Nakit üretmeyen veya özkaynak kârlılığı negatif/sıfır olanları doğrudan ele!
+            if filtre_ocf_aktif and temel["ocf"] <= 0:
+                continue
+            if filtre_roe_aktif and temel["roe"] <= 0:
+                continue
 
             zirve_5y = df_m['Close'].max()
             iskonto = ((zirve_5y - son_fiyat) / zirve_5y) * 100.0
@@ -721,7 +764,7 @@ else:
 
     if not aday_listesi:
         st.warning(
-            f"{secilen_endeks} içinde bu stratejiye, pozitif nakit akışına (OCF > 0) ve kârlılığa (ROE > 0) uyan hisse bulunamadı. Kapsamı genişletip tekrar deneyin.")
+            f"{secilen_endeks} içinde seçilen kriterlere uyan hisse bulunamadı. Filtreleri esnetip tekrar deneyebilirsiniz.")
     else:
         df_puan = pd.DataFrame(aday_listesi)
 
@@ -738,18 +781,20 @@ else:
         norm_vol = normalize(df_puan["Hacim"])
         norm_rsi = 100 - normalize(df_puan["RSI"])
 
-        df_puan["Skor"] = (norm_fcf * 0.30) + (norm_roe * 0.25) + (norm_iskonto * 0.25) + (norm_vol * 0.10) + (
-                    norm_rsi * 0.10)
+        if "Warren Buffett" in mtf_modu:
+            df_puan["Skor"] = (norm_roe * 0.35) + (norm_fcf * 0.35) + (norm_iskonto * 0.20) + (norm_vol * 0.10)
+        else:
+            df_puan["Skor"] = (norm_fcf * 0.30) + (norm_roe * 0.25) + (norm_iskonto * 0.25) + (norm_vol * 0.10) + (
+                        norm_rsi * 0.10)
+
         df_puan["Skor"] = df_puan["Skor"].round(1)
         df_puan = df_puan.sort_values(by="Skor", ascending=False).reset_index(drop=True)
 
-        st.success(
-            f"🎯 Seçilen stratejiye ve kârlılık/nakit akışı kriterlerine uyan **{len(df_puan)}** kaliteli şirket saptandı!")
+        st.success(f"🎯 Seçilen stratejiye ve kriterlere uyan **{len(df_puan)}** şirket saptandı!")
 
         tablo_gosterim = df_puan.drop(columns=["df", "tam_sym"]).copy()
         tablo_gosterim.index = tablo_gosterim.index + 1
 
-        # DARALTILMIŞ KOMPAKT TABLO
         st.dataframe(
             tablo_gosterim,
             use_container_width=True,
@@ -761,12 +806,11 @@ else:
                 "RSI": st.column_config.NumberColumn("RSI", width=55, format="%.1f",
                                                      help="14 periyotluk RSI dip seviyesi."),
                 "Dönüş": st.column_config.TextColumn("Tetik", width=85, help="Yeşile dönüş periyodu."),
-                "MTF": st.column_config.TextColumn("MTF Durumu", width=110, help="Seçilen çoklu zaman dilimi yapısı."),
+                "MTF": st.column_config.TextColumn("MTF Durumu", width=110, help="Seçilen strateji modeli."),
                 "Hacim": st.column_config.NumberColumn("Hacim", width=65, format="%.2fx", help="Hacim patlaması katı."),
                 "FCF %": st.column_config.NumberColumn("FCF %", width=60, format="%.1f%%",
                                                        help="Serbest Nakit Akışı Verimi."),
-                "ROE %": st.column_config.NumberColumn("ROE %", width=60, format="%.1f%%",
-                                                       help="Özsermaye Kârlılığı (Pozitif zorunlu)."),
+                "ROE %": st.column_config.NumberColumn("ROE %", width=60, format="%.1f%%", help="Özsermaye Kârlılığı."),
                 "İskonto %": st.column_config.NumberColumn("İskonto", width=65, format="%.1f%%",
                                                            help="Zirvesine göre iskonto oranı."),
                 "Skor": st.column_config.NumberColumn("Skor", width=55, format="%.1f",
@@ -807,7 +851,7 @@ else:
                             <span style="font-size: 1.1rem; color: #00c087; margin-left: 12px; font-weight: 700;">{row['Fiyat']} {para_birimi}</span>
                         </div>
                         <div>
-                            <span class="badge-mtf" style="margin-right: 6px;">{row['MTF']}</span>
+                            <span class="badge-buffett" style="margin-right: 6px;">{row['MTF']}</span>
                             <span class="badge-vol" style="margin-right: 6px;">{vol_badge} ({row['Hacim']}x)</span>
                             <span class="badge-turn">{row['Dönüş']}</span>
                         </div>
