@@ -154,7 +154,7 @@ def binance_fonlama_oranlari():
 
 
 # -------------------------------------------------------------
-# DİNAMİK LİKİT KRİPTO HAVUZU (COINGECKO)
+# DİNAMİK LİKİT KRİPTO HAVUZU & ANTİ-ÇÖP KALKANI
 # -------------------------------------------------------------
 @st.cache_data(ttl=3600)
 def en_likit_kriptolar():
@@ -163,27 +163,56 @@ def en_likit_kriptolar():
         params = {"vs_currency": "usd", "order": "market_cap_desc", "per_page": 250, "page": 1, "sparkline": "false"}
         res = requests.get(url, params=params, timeout=5)
         if res.status_code == 200:
-            stabil_coinler = {"usdt", "usdc", "dai", "fdusd", "tusd", "usde", "pyusd", "usdd", "bousd"}
+
+            # 1. Agresif Stablecoin ve Türev Kara Listesi
+            kara_liste = {
+                "usdt", "usdc", "dai", "fdusd", "tusd", "usde", "pyusd", "usdd", "bousd",
+                "gusd", "crvusd", "frax", "usdp", "eurc", "eurt", "susd", "lusd", "aeur",
+                "steth", "weth", "wbtc", "cbeth", "reth", "wsteth"
+            }
+
+            # 2. Shitcoin / Meme Coin Kelime Avcısı (Gelecekteki çöpleri eler)
+            cop_kelimeler = ["inu", "pepe", "elon", "moon", "safe", "baby", "cat", "floki", "trump", "maga", "woof",
+                             "wif", "bome", "slerf", "cum", "boy"]
+            istisnalar = {"doge"}  # Demirbaş olduğu için izin ver
+
             semboller = []
             for item in res.json():
                 sym = item.get("symbol", "").lower()
-                if sym not in stabil_coinler:
-                    semboller.append(f"{sym.upper()}-USD")
+                name = item.get("name", "").lower()
+                vol_24h = item.get("total_volume", 0)
+
+                # KURAL 1: Stablecoin ve Türevleri Ele (ismi usd ile bitenleri de at)
+                if sym in kara_liste or sym.endswith("usd") or sym.endswith("eur"):
+                    continue
+
+                # KURAL 2: Zombi Proje Filtresi (Günlük hacim < 10 Milyon Dolar ise çöptür)
+                if vol_24h < 10000000:
+                    continue
+
+                # KURAL 3: Kalitesiz Meme ve Hype Coin Filtresi
+                if sym not in istisnalar:
+                    if any(cop in sym for cop in cop_kelimeler) or any(cop in name for cop in cop_kelimeler):
+                        continue
+
+                semboller.append(f"{sym.upper()}-USD")
+
             if len(semboller) >= 50:
                 return semboller
     except Exception:
         pass
 
+    # Yedek Havuz (Zombiler ve Stablelar Temizlendi)
     return [
         "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
         "TRX-USD", "AVAX-USD", "LINK-USD", "SUI-USD", "DOT-USD", "NEAR-USD", "APT-USD",
-        "LTC-USD", "BCH-USD", "XLM-USD", "SHIB-USD", "UNI-USD", "HBAR-USD", "ICP-USD",
+        "LTC-USD", "BCH-USD", "XLM-USD", "UNI-USD", "HBAR-USD", "ICP-USD",
         "FET-USD", "TAO-USD", "RENDER-USD", "AAVE-USD", "FIL-USD", "INJ-USD", "TIA-USD",
         "OP-USD", "ARB-USD", "SEI-USD", "KAS-USD", "FTM-USD", "VET-USD", "ALGO-USD",
         "RUNE-USD", "GRT-USD", "THETA-USD", "STX-USD", "PENDLE-USD", "IMX-USD", "MKR-USD",
-        "LDO-USD", "FLOKI-USD", "JUP-USD", "GALA-USD", "SAND-USD", "MANA-USD", "CRV-USD",
+        "LDO-USD", "JUP-USD", "GALA-USD", "SAND-USD", "MANA-USD", "CRV-USD",
         "SNX-USD", "DYDX-USD", "EGLD-USD", "FLOW-USD", "AXS-USD", "QNT-USD", "CHZ-USD",
-        "BEAM-USD", "WIF-USD", "BONK-USD", "ENS-USD", "PYTH-USD", "ONDO-USD"
+        "BEAM-USD", "ENS-USD", "PYTH-USD", "ONDO-USD"
     ]
 
 
@@ -297,7 +326,7 @@ st.sidebar.title("⚙️ Kripto Radarı Ayarları")
 
 secilen_kapsam = st.sidebar.selectbox(
     "🪙 Taranacak Kapsam",
-    options=["İlk 100 Likit Varlık (Önerilen)", "İlk 30 (Mega & Büyükler)", "Tüm Havuz (250 Varlık)"]
+    options=["İlk 100 Likit Varlık (Önerilen)", "İlk 30 (Mega & Büyükler)", "Tüm Havuz (Çöpler Temizlenmiş)"]
 )
 
 # YENİ STRATEJİ VE MTF MODLARI
@@ -352,9 +381,9 @@ else:
     elif "İlk 100" in secilen_kapsam:
         hedef_coinler = tam_havuz[:100]
     else:
-        hedef_coinler = tam_havuz[:250]
+        hedef_coinler = tam_havuz
 
-    st.write(f"🔄 **{secilen_kapsam}** ({len(hedef_coinler)} varlık) taranıyor...")
+    st.write(f"🔄 **{secilen_kapsam}** ({len(hedef_coinler)} filtrelenmiş organik varlık) taranıyor...")
 
     binance_fr = binance_fonlama_oranlari()
     sembol_str = " ".join(hedef_coinler)
@@ -414,14 +443,12 @@ else:
             ort_hacim = df_d['Volume'].iloc[-4:-1].mean() if len(df_d) >= 4 else son_hacim
 
             # ==============================================================
-            # YENİ STRATEJİ: AYLIK VE HAFTALIK YEŞİLKEN GÜNLÜKTE YENİ YEŞİL
+            # STRATEJİ: AYLIK VE HAFTALIK YEŞİLKEN GÜNLÜKTE YENİ YEŞİL
             # ==============================================================
             if "Aylık ve Haftalık Yeşilken" in kripto_mtf_modu and veri_aylik is not None and veri_haftalik is not None:
-                # 1. Günlükte taze yeşile dönüş olmalı
                 if not gunluk_taze_yesil:
                     continue
 
-                # 2. Aylık grafik yeşil olmalı
                 if sym not in veri_aylik.columns.levels[0]:
                     continue
                 df_m = veri_aylik[sym].dropna(how="all").dropna(subset=['Close'])
@@ -434,7 +461,6 @@ else:
                 if not aylik_yesil:
                     continue
 
-                # 3. Haftalık grafik yeşil olmalı
                 if sym not in veri_haftalik.columns.levels[0]:
                     continue
                 df_w = veri_haftalik[sym].dropna(how="all").dropna(subset=['Close'])
@@ -547,7 +573,7 @@ else:
 
     if not aday_listesi:
         st.warning(
-            "Seçilen 3x MTF stratejisine uyan kripto varlık bulunamadı. Kapsamı genişletip veya filtreleri esnetip tekrar deneyin.")
+            "Seçilen 3x MTF stratejisine uyan kripto varlık bulunamadı. Temizlenmiş havuzda taze dönüş yapan organik bir proje yok.")
     else:
         df_puan = pd.DataFrame(aday_listesi)
 
@@ -568,7 +594,7 @@ else:
         df_puan["Skor"] = df_puan["Skor"].round(1)
         df_puan = df_puan.sort_values(by="Skor", ascending=False).reset_index(drop=True)
 
-        st.success(f"🎯 Kriterlere ve 3x MTF trend uyumuna sahip **{len(df_puan)}** kripto tespit edildi!")
+        st.success(f"🎯 Organik ve kaliteli **{len(df_puan)}** kripto tespit edildi!")
 
         tablo_gosterim = df_puan.drop(columns=["df", "tam_sym"]).copy()
         tablo_gosterim.index = tablo_gosterim.index + 1
@@ -602,7 +628,7 @@ else:
             full_sym = row['tam_sym']
             df_plot = row['df'].tail(45)
             vol_badge = "🔥 Hacim Artışı" if row['Hacim Katı'] >= 1.2 else "Normal Hacim"
-            squeeze_badge = "⚡ Short Squeeze Adayı" if row['Fonlama %'] <= 0.0 else f"Fonlama: %{row['Fonlama %']}"
+            squeeze_badge = "⚡ Squeeze Adayı" if row['Fonlama %'] <= 0.0 else f"Fonlama: %{row['Fonlama %']}"
 
             olumlu_ozetler, olumsuz_ozetler = canli_kripto_haberleri(full_sym, sym_clean)
 
