@@ -16,7 +16,7 @@ def sifre_kontrol():
     if not st.session_state["auth"]:
         pwd = st.text_input("Giriş Şifresi:", type="password")
         if st.button("Giriş"):
-            if pwd == "ozelSifreniz123":  # Kendi belirleyeceğiniz şifre
+            if pwd == "Mmbtfea2":  # Kendi belirleyeceğiniz şifre
                 st.session_state["auth"] = True
                 st.rerun()
             else:
