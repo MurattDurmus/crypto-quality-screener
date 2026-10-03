@@ -164,17 +164,18 @@ def en_likit_kriptolar():
         res = requests.get(url, params=params, timeout=5)
         if res.status_code == 200:
 
-            # 1. Agresif Stablecoin ve Türev Kara Listesi
+            # 1. Agresif Stablecoin, Türev ve Zombi Kara Listesi (BTT vb. eklendi)
             kara_liste = {
                 "usdt", "usdc", "dai", "fdusd", "tusd", "usde", "pyusd", "usdd", "bousd",
                 "gusd", "crvusd", "frax", "usdp", "eurc", "eurt", "susd", "lusd", "aeur",
-                "steth", "weth", "wbtc", "cbeth", "reth", "wsteth"
+                "steth", "weth", "wbtc", "cbeth", "reth", "wsteth",
+                "btt", "bttold", "ohm", "lunc", "ustc", "ftt", "xec"
             }
 
-            # 2. Shitcoin / Meme Coin Kelime Avcısı (Gelecekteki çöpleri eler)
+            # 2. Shitcoin / Meme Coin Kelime Avcısı
             cop_kelimeler = ["inu", "pepe", "elon", "moon", "safe", "baby", "cat", "floki", "trump", "maga", "woof",
                              "wif", "bome", "slerf", "cum", "boy"]
-            istisnalar = {"doge"}  # Demirbaş olduğu için izin ver
+            istisnalar = {"doge"}
 
             semboller = []
             for item in res.json():
@@ -182,15 +183,12 @@ def en_likit_kriptolar():
                 name = item.get("name", "").lower()
                 vol_24h = item.get("total_volume", 0)
 
-                # KURAL 1: Stablecoin ve Türevleri Ele (ismi usd ile bitenleri de at)
                 if sym in kara_liste or sym.endswith("usd") or sym.endswith("eur"):
                     continue
 
-                # KURAL 2: Zombi Proje Filtresi (Günlük hacim < 10 Milyon Dolar ise çöptür)
                 if vol_24h < 10000000:
                     continue
 
-                # KURAL 3: Kalitesiz Meme ve Hype Coin Filtresi
                 if sym not in istisnalar:
                     if any(cop in sym for cop in cop_kelimeler) or any(cop in name for cop in cop_kelimeler):
                         continue
@@ -202,7 +200,6 @@ def en_likit_kriptolar():
     except Exception:
         pass
 
-    # Yedek Havuz (Zombiler ve Stablelar Temizlendi)
     return [
         "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
         "TRX-USD", "AVAX-USD", "LINK-USD", "SUI-USD", "DOT-USD", "NEAR-USD", "APT-USD",
