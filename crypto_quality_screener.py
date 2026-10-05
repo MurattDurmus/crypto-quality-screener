@@ -9,7 +9,7 @@ import re
 import urllib.parse
 
 st.set_page_config(
-    page_title="Kripto Kalite, MTF & Tasfiye Radarı",
+    page_title="Binance Kripto Kalite, MTF & Tasfiye Radarı",
     page_icon="🪙",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -132,75 +132,40 @@ def turkceye_cevir(metin):
 
 
 # -------------------------------------------------------------
-# BINANCE VADELİ İŞLEM (FONLAMA ORANI)
+# BİNANCE VADELİ İŞLEM LİSTESİ & FONLAMA ORANLARI
 # -------------------------------------------------------------
 @st.cache_data(ttl=300)
-def binance_fonlama_oranlari():
+def binance_vadeli_kriptolari_ve_fonlama():
     try:
         url = "https://fapi.binance.com/fapi/v1/premiumIndex"
-        res = requests.get(url, timeout=4)
+        res = requests.get(url, timeout=5)
         if res.status_code == 200:
             oranlar = {}
+            semboller = []
+
+            # İstenmeyen sabitcoin ve türev varlıklar (Filtreleme)
+            kara_liste = {
+                "USDT", "USDC", "DAI", "FDUSD", "TUSD", "USDE", "PYUSD", "USDD",
+                "BUSD", "GUSD", "CRVUSD", "FRAX", "USDP", "EURC", "EURT", "SUSD", "LUSD"
+            }
+
             for item in res.json():
                 sym = item.get("symbol", "")
                 if sym.endswith("USDT"):
                     clean = sym.replace("USDT", "")
-                    fr = float(item.get("lastFundingRate", 0.0)) * 100
-                    oranlar[clean] = round(fr, 4)
-            return oranlar
-    except Exception:
-        pass
-    return {}
-
-
-# -------------------------------------------------------------
-# DİNAMİK LİKİT KRİPTO HAVUZU & ANTİ-ÇÖP KALKANI
-# -------------------------------------------------------------
-@st.cache_data(ttl=3600)
-def en_likit_kriptolar():
-    try:
-        url = "https://api.coingecko.com/api/v3/coins/markets"
-        params = {"vs_currency": "usd", "order": "market_cap_desc", "per_page": 250, "page": 1, "sparkline": "false"}
-        res = requests.get(url, params=params, timeout=5)
-        if res.status_code == 200:
-
-            # 1. Agresif Stablecoin, Türev ve Zombi Kara Listesi (BTT vb. eklendi)
-            kara_liste = {
-                "usdt", "usdc", "dai", "fdusd", "tusd", "usde", "pyusd", "usdd", "bousd",
-                "gusd", "crvusd", "frax", "usdp", "eurc", "eurt", "susd", "lusd", "aeur",
-                "steth", "weth", "wbtc", "cbeth", "reth", "wsteth",
-                "btt", "bttold", "ohm", "lunc", "ustc", "ftt", "xec"
-            }
-
-            # 2. Shitcoin / Meme Coin Kelime Avcısı
-            cop_kelimeler = ["inu", "pepe", "elon", "moon", "safe", "baby", "cat", "floki", "trump", "maga", "woof",
-                             "wif", "bome", "slerf", "cum", "boy"]
-            istisnalar = {"doge"}
-
-            semboller = []
-            for item in res.json():
-                sym = item.get("symbol", "").lower()
-                name = item.get("name", "").lower()
-                vol_24h = item.get("total_volume", 0)
-
-                if sym in kara_liste or sym.endswith("usd") or sym.endswith("eur"):
-                    continue
-
-                if vol_24h < 10000000:
-                    continue
-
-                if sym not in istisnalar:
-                    if any(cop in sym for cop in cop_kelimeler) or any(cop in name for cop in cop_kelimeler):
+                    if clean in kara_liste:
                         continue
 
-                semboller.append(f"{sym.upper()}-USD")
+                    fr = float(item.get("lastFundingRate", 0.0)) * 100
+                    oranlar[clean] = round(fr, 4)
+                    semboller.append(f"{clean}-USD")
 
-            if len(semboller) >= 50:
-                return semboller
+            return semboller, oranlar
     except Exception:
         pass
 
-    return [
+    # Yedek Liste (Binance Vadeli Varlıkları)
+    yedek_liste = [
         "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
         "TRX-USD", "AVAX-USD", "LINK-USD", "SUI-USD", "DOT-USD", "NEAR-USD", "APT-USD",
         "LTC-USD", "BCH-USD", "XLM-USD", "UNI-USD", "HBAR-USD", "ICP-USD",
@@ -211,6 +176,8 @@ def en_likit_kriptolar():
         "SNX-USD", "DYDX-USD", "EGLD-USD", "FLOW-USD", "AXS-USD", "QNT-USD", "CHZ-USD",
         "BEAM-USD", "ENS-USD", "PYTH-USD", "ONDO-USD"
     ]
+    yedek_oranlar = {s.replace("-USD", ""): 0.01 for s in yedek_liste}
+    return yedek_liste, yedek_oranlar
 
 
 # -------------------------------------------------------------
@@ -302,13 +269,13 @@ def canli_kripto_haberleri(coin_sembol, clean_sym):
 
     if not olumlu:
         olumlu.append({
-            "ozet": f"{clean_sym}, zincir üstü aktivite ve balina cüzdan hareketlerinde dipten toparlanma eğilimi sergiliyor.",
-            "link": f"https://coinmarketcap.com/currencies/{clean_sym.lower()}",
-            "source": "Zincir Üstü Analiz"
+            "ozet": f"{clean_sym}, Binance vadeli işlemler tarafında balina cüzdan hareketlerinde dipten toparlanma eğilimi sergiliyor.",
+            "link": f"https://www.binance.com/en/futures/{clean_sym}USDT",
+            "source": "Binance Futures"
         })
     if not olumsuz:
         olumsuz.append({
-            "ozet": f"Kripto piyasasındaki makro faiz belirsizlikleri ve ani türev tasfiyeleri volatilite riski yaratıyor.",
+            "ozet": f"Vadeli piyasadaki kaldıraçlı pozisyon yoğunlaşmaları ve ani tasfiye riskleri volatilite yaratıyor.",
             "link": f"https://www.coindesk.com",
             "source": "Piyasa Notu"
         })
@@ -319,14 +286,14 @@ def canli_kripto_haberleri(coin_sembol, clean_sym):
 # =============================================================
 # SIDEBAR
 # =============================================================
-st.sidebar.title("⚙️ Kripto Radarı Ayarları")
+st.sidebar.title("⚙️ Binance Varlık Radarı")
 
 secilen_kapsam = st.sidebar.selectbox(
     "🪙 Taranacak Kapsam",
-    options=["İlk 100 Likit Varlık (Önerilen)", "İlk 30 (Mega & Büyükler)", "Tüm Havuz (Çöpler Temizlenmiş)"]
+    options=["Tüm Binance Vadeli USDT Varlıkları", "İlk 50 Binance Vadeli Varlık", "İlk 30 Binance Vadeli Varlık"]
 )
 
-# YENİ STRATEJİ VE MTF MODLARI
+# MTF & Strateji Modları
 st.sidebar.markdown("---")
 st.sidebar.markdown("**⏳ Çoklu Zaman Dilimi (MTF) & Strateji:**")
 kripto_mtf_modu = st.sidebar.radio(
@@ -338,7 +305,7 @@ kripto_mtf_modu = st.sidebar.radio(
         "⚡ Sadece Haftalık Hull Yeni Yeşile Dönenler (Orta/Uzun Vade)"
     ],
     index=0,
-    help="1. Seçenek: Aylık ve haftalık ana trendi boğa olan coinlerin günlük ara düzeltmesini tamamlayıp taze yeşile döndüğü en yüksek olasılıklı giriş anlarını bulur."
+    help="1. Seçenek: Aylık ve haftalık ana trendi boğa olan Binance coinlerinin günlük düzeltme sonrasında taze yeşile döndüğü anları bulur."
 )
 
 st.sidebar.markdown("---")
@@ -362,30 +329,30 @@ st.sidebar.caption("• %30 Hacim Patlaması")
 st.sidebar.caption("• %20 WAE Patlama Gücü")
 st.sidebar.caption("• %20 Fonlama Oranı (Squeeze Gücü)")
 
-baslat_butonu = st.sidebar.button("🚀 Kriptoları Canlı Tara", use_container_width=True)
+baslat_butonu = st.sidebar.button("🚀 Binance Vadeli Tara", use_container_width=True)
 
 # =============================================================
 # ANA EKRAN
 # =============================================================
-st.title("🪙 Kripto MTF Trend & Türev Tasfiye Radarı")
+st.title("🪙 Binance Vadeli İşlemler: MTF Trend & Tasfiye Radarı")
 
 if not baslat_butonu:
-    st.info("Sol menüden MTF stratejinizi belirleyip **'Kriptoları Canlı Tara'** butonuna tıklayın.")
+    st.info("Sol menüden stratejinizi seçip **'Binance Vadeli Tara'** butonuna tıklayın.")
 else:
-    tam_havuz = en_likit_kriptolar()
+    tam_havuz, binance_fr = binance_vadeli_kriptolari_ve_fonlama()
+
     if "İlk 30" in secilen_kapsam:
         hedef_coinler = tam_havuz[:30]
-    elif "İlk 100" in secilen_kapsam:
-        hedef_coinler = tam_havuz[:100]
+    elif "İlk 50" in secilen_kapsam:
+        hedef_coinler = tam_havuz[:50]
     else:
         hedef_coinler = tam_havuz
 
-    st.write(f"🔄 **{secilen_kapsam}** ({len(hedef_coinler)} filtrelenmiş organik varlık) taranıyor...")
+    st.write(f"🔄 Binance Vadeli İşlemler havuzundan **{len(hedef_coinler)}** aktif USDT paritesi taranıyor...")
 
-    binance_fr = binance_fonlama_oranlari()
     sembol_str = " ".join(hedef_coinler)
 
-    # Gerekli Zaman Dilimlerini İndir
+    # Zaman Dilimi Verilerini İndir
     veri_gunluk = yf.download(sembol_str, period="1y", interval="1d", group_by="ticker", auto_adjust=True, threads=True)
 
     veri_haftalik = None
@@ -401,7 +368,7 @@ else:
                                     threads=True)
 
     aday_listesi = []
-    bar = st.progress(0, text="Aylık, haftalık ve günlük Hull eğrileri hesaplanıyor...")
+    bar = st.progress(0, text="Binance vadeli varlıkların Hull eğrileri hesaplanıyor...")
     toplam = len(hedef_coinler)
 
     for idx, sym in enumerate(hedef_coinler):
@@ -439,13 +406,10 @@ else:
             son_hacim = son_d.get('Volume', 0)
             ort_hacim = df_d['Volume'].iloc[-4:-1].mean() if len(df_d) >= 4 else son_hacim
 
-            # ==============================================================
-            # STRATEJİ: AYLIK VE HAFTALIK YEŞİLKEN GÜNLÜKTE YENİ YEŞİL
-            # ==============================================================
+            # Strateji Seçimleri
             if "Aylık ve Haftalık Yeşilken" in kripto_mtf_modu and veri_aylik is not None and veri_haftalik is not None:
                 if not gunluk_taze_yesil:
                     continue
-
                 if sym not in veri_aylik.columns.levels[0]:
                     continue
                 df_m = veri_aylik[sym].dropna(how="all").dropna(subset=['Close'])
@@ -454,8 +418,7 @@ else:
                 df_m['HMA'] = hma_hesapla(df_m['Close'], periyot=20)
                 df_m['HMA_Diff'] = df_m['HMA'].diff()
                 son_m = df_m.iloc[-1]
-                aylik_yesil = (son_m['HMA_Diff'] > 0) and (son_m['Close'] >= son_m['HMA'] * 0.95)
-                if not aylik_yesil:
+                if not ((son_m['HMA_Diff'] > 0) and (son_m['Close'] >= son_m['HMA'] * 0.95)):
                     continue
 
                 if sym not in veri_haftalik.columns.levels[0]:
@@ -466,21 +429,16 @@ else:
                 df_w['HMA'] = hma_hesapla(df_w['Close'], periyot=20)
                 df_w['HMA_Diff'] = df_w['HMA'].diff()
                 son_w = df_w.iloc[-1]
-                haftalik_yesil = (son_w['HMA_Diff'] > 0) and (son_w['Close'] >= son_w['HMA'] * 0.95)
-                if not haftalik_yesil:
+                if not ((son_w['HMA_Diff'] > 0) and (son_w['Close'] >= son_w['HMA'] * 0.95)):
                     continue
 
                 uygun_teknik = True
                 tetik_etiketi = "🟢 Bugün Yeni" if gunluk_bu_yesil else "⚡ Dün Döndü"
                 mtf_durumu = "🎯 Aylık & Haftalık Yeşil + Günlük Tetik"
 
-            # ==============================================================
-            # STRATEJİ: HAFTALIK POZİTİF + GÜNLÜK TETİK
-            # ==============================================================
             elif "Haftalık Trendi Pozitif" in kripto_mtf_modu and veri_haftalik is not None:
                 if not gunluk_taze_yesil:
                     continue
-
                 if sym not in veri_haftalik.columns.levels[0]:
                     continue
                 df_w = veri_haftalik[sym].dropna(how="all").dropna(subset=['Close'])
@@ -496,9 +454,6 @@ else:
                 tetik_etiketi = "🟢 Bugün Yeni" if gunluk_bu_yesil else "⚡ Dün Döndü"
                 mtf_durumu = "🛡️ Haftalık Boğa + Günlük Tetik"
 
-            # ==============================================================
-            # STRATEJİ: SADECE HAFTALIK TAZE YEŞİL
-            # ==============================================================
             elif "Sadece Haftalık" in kripto_mtf_modu and veri_haftalik is not None:
                 if sym not in veri_haftalik.columns.levels[0]:
                     continue
@@ -524,10 +479,6 @@ else:
                     son_fiyat = son_w['Close']
                     son_hacim = son_w.get('Volume', 0)
                     ort_hacim = df_w['Volume'].iloc[-4:-1].mean() if len(df_w) >= 4 else son_hacim
-
-            # ==============================================================
-            # STRATEJİ: SADECE GÜNLÜK TAZE YEŞİL
-            # ==============================================================
             else:
                 if gunluk_taze_yesil:
                     uygun_teknik = True
@@ -537,7 +488,6 @@ else:
             if not uygun_teknik:
                 continue
 
-            # Hacim Oranı Kontrolü
             hacim_orani = (son_hacim / ort_hacim) if (ort_hacim and ort_hacim > 0) else 1.0
             if hacim_filtresi and hacim_orani < 1.2:
                 continue
@@ -569,8 +519,7 @@ else:
     bar.empty()
 
     if not aday_listesi:
-        st.warning(
-            "Seçilen 3x MTF stratejisine uyan kripto varlık bulunamadı. Temizlenmiş havuzda taze dönüş yapan organik bir proje yok.")
+        st.warning("Seçilen stratejiye uyan Binance vadeli varlığı bulunamadı.")
     else:
         df_puan = pd.DataFrame(aday_listesi)
 
@@ -586,12 +535,11 @@ else:
         norm_vol = normalize(df_puan["Hacim Katı"])
         norm_wae = normalize(df_puan["WAE Gücü"])
 
-        # %30 İskonto + %30 Hacim + %20 WAE + %20 Short Squeeze / Fonlama Gücü
         df_puan["Skor"] = (norm_iskonto * 0.30) + (norm_vol * 0.30) + (norm_wae * 0.20) + (norm_fr * 0.20)
         df_puan["Skor"] = df_puan["Skor"].round(1)
         df_puan = df_puan.sort_values(by="Skor", ascending=False).reset_index(drop=True)
 
-        st.success(f"🎯 Organik ve kaliteli **{len(df_puan)}** kripto tespit edildi!")
+        st.success(f"🎯 Binance Vadeli İşlemler havuzunda kriterlere uyan **{len(df_puan)}** varlık tespit edildi!")
 
         tablo_gosterim = df_puan.drop(columns=["df", "tam_sym"]).copy()
         tablo_gosterim.index = tablo_gosterim.index + 1
@@ -600,25 +548,20 @@ else:
             tablo_gosterim,
             use_container_width=True,
             column_config={
-                "Varlık": st.column_config.TextColumn("Varlık", width=75, help="Kripto para sembolü."),
-                "Fiyat ($)": st.column_config.NumberColumn("Fiyat ($)", width=85, format="$%.2f", help="Güncel fiyat."),
-                "Günlük Tetik": st.column_config.TextColumn("Dönüş", width=95, help="Hull MA dönüş periyodu."),
-                "MTF Uyumu": st.column_config.TextColumn("MTF Uyumu", width=130, help="Çoklu zaman dilimi durumu."),
-                "Fonlama %": st.column_config.NumberColumn("Fonlama %", width=85, format="%.4f%%",
-                                                           help="Binance Vadeli fonlama oranı."),
-                "Hacim Katı": st.column_config.NumberColumn("Hacim", width=75, format="%.2fx",
-                                                            help="Hacim patlaması katı."),
-                "ATH İskonto %": st.column_config.NumberColumn("İskonto %", width=80, format="%.1f%%",
-                                                               help="Zirvesine göre iskonto payı."),
-                "WAE Gücü": st.column_config.NumberColumn("WAE", width=70, format="%.1f",
-                                                          help="Momentum patlama şiddeti."),
-                "Skor": st.column_config.NumberColumn("Skor", width=70, format="%.1f",
-                                                      help="Bileşik Kripto Skoru (0-100).")
+                "Varlık": st.column_config.TextColumn("Varlık", width=75),
+                "Fiyat ($)": st.column_config.NumberColumn("Fiyat ($)", width=85, format="$%.2f"),
+                "Günlük Tetik": st.column_config.TextColumn("Dönüş", width=95),
+                "MTF Uyumu": st.column_config.TextColumn("MTF Uyumu", width=130),
+                "Fonlama %": st.column_config.NumberColumn("Fonlama %", width=85, format="%.4f%%"),
+                "Hacim Katı": st.column_config.NumberColumn("Hacim", width=75, format="%.2fx"),
+                "ATH İskonto %": st.column_config.NumberColumn("İskonto %", width=80, format="%.1f%%"),
+                "WAE Gücü": st.column_config.NumberColumn("WAE", width=70, format="%.1f"),
+                "Skor": st.column_config.NumberColumn("Skor", width=70, format="%.1f")
             }
         )
 
         st.markdown("---")
-        st.subheader("📰 En Yüksek Skorlu İlk 5 Coin — Gelişmeler & Grafik")
+        st.subheader("📰 En Yüksek Skorlu İlk 5 Binance Varlığı — Haberler & Grafik")
 
         for i, row in df_puan.head(5).iterrows():
             sym_clean = row['Varlık']
@@ -658,9 +601,9 @@ else:
                         <span class="badge-metric">💰 Fonlama: %{row['Fonlama %']}</span>
                     </div>
                     <div class="insight-box">
-                        <div class="pos-header">✅ (+) Canlı Ekosistem & Zincir Üstü Gelişmeler (Habere Gitmek İçin Tıklayın):</div>
+                        <div class="pos-header">✅ (+) Canlı Ekosistem & Zincir Üstü Gelişmeler:</div>
                         {pos_html}
-                        <div class="neg-header">⚠️ (-) Satış Baskıları & Tasfiye Riskleri (Habere Gitmek İçin Tıklayın):</div>
+                        <div class="neg-header">⚠️ (-) Satış Baskıları & Tasfiye Riskleri:</div>
                         {neg_html}
                     </div>
                 </div>

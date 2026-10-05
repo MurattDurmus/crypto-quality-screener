@@ -2,14 +2,19 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7eb1da52-ba37-47ac-8d36-41c3d4058d44" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/RedditSmartTracker.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/RedditSmartTracker.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/akilli_laboratuvar.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backtest_lab.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/fiyat_kesisim_lab.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/genetik_crossover_lab.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/genetik_motor.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ml_trend_avcisi.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/piyasa_agi.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/saf_trend_lab.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/sinek.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/trailing_stop_lab.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/yatirim_pusulasi.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_tracker.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_tracker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bist_smart_money.py" beforeDir="false" afterPath="$PROJECT_DIR$/bist_smart_money.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/growth_screener.py" beforeDir="false" afterPath="$PROJECT_DIR$/growth_screener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sp500_monthly_wae.py" beforeDir="false" afterPath="$PROJECT_DIR$/sp500_monthly_wae.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sp500_scanner.py" beforeDir="false" afterPath="$PROJECT_DIR$/sp500_scanner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tracker.py" beforeDir="false" afterPath="$PROJECT_DIR$/tracker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/crypto_quality_screener.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_quality_screener.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,9 +31,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 0
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
   <component name="ProjectId" id="3K9ipTaHjhYH3PD57oE7XqxmSvu" />
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
@@ -40,7 +45,10 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.algoritmik_tuval.executor": "Run",
     "Python.app_tracker.executor": "Run",
+    "Python.backtest_lab.executor": "Run",
+    "Python.sinek.executor": "Run",
     "Python.sp500_monthly_wae.executor": "Run",
     "Python.sp500_scanner.executor": "Run",
     "Python.tracker.executor": "Run",
