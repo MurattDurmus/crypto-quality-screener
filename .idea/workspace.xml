@@ -2,19 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="7eb1da52-ba37-47ac-8d36-41c3d4058d44" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/akilli_laboratuvar.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backtest_lab.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/fiyat_kesisim_lab.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/genetik_crossover_lab.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/genetik_motor.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ml_trend_avcisi.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/piyasa_agi.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/saf_trend_lab.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/sinek.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/trailing_stop_lab.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/yatirim_pusulasi.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/crypto_quality_screener.py" beforeDir="false" afterPath="$PROJECT_DIR$/crypto_quality_screener.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
